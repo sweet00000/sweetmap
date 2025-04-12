@@ -1,12 +1,106 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Hello World</title>
-  </head>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aetherium</title>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Leaflet JavaScript -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"/>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+    <style>
+        /* Set the map container size */
+        #map {
+            height: 800px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <h1>Aetherium</h1>
+    <div id="map"></div>
 
-  <body>
-    <h1>Hello World</h1>
-  </body>
+    <script>
+        // --- Initialize Map ---
+        // Centered roughly on the US
+        const map = L.map('map').setView([39.82, -98.58], 4);
+
+        // --- Base Layers ---
+        const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map); // Add OSM by default
+
+        const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles © Esri — Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+        });
+
+        // Add the USGS Imagery Only MapServer as a tile layer
+        const usgsImagery = L.tileLayer('https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryOnly/MapServer/tile/{z}/{y}/{x}', {
+            maxZoom: 20,
+            attribution: 'USGS'
+        });
+
+        // Example: NAIP Imagery via USDA WMS (Check availability for your area of interest)
+        // Source: https://gis.apfo.usda.gov/arcgis/services/NAIP/USDA_CONUS_PRIME/ImageServer/WMSServer
+        const naipUSDA = L.tileLayer.wms('https://gis.apfo.usda.gov/arcgis/services/NAIP/USDA_CONUS_PRIME/ImageServer/WMSServer', {
+            layers: '0', // Often the default layer
+            format: 'image/png',
+            transparent: true,
+            attribution: 'USDA NAIP Program'
+        });
+
+        // Example: 3DEP Elevation Hillshade via USGS WMS
+        // Source: https://elevation.nationalmap.gov/arcgis/services/3DEPElevation/ImageServer/WMSServer
+        const dep3USGS_Hillshade = L.tileLayer.wms('https://elevation.nationalmap.gov/arcgis/services/3DEPElevation/ImageServer/WMSServer', {
+            layers: '3DEPElevation:Hillshade Gray', // Specific hillshade layer
+            format: 'image/png',
+            transparent: true,
+            attribution: 'USGS 3DEP Program'
+        });
+
+        // --- Layer Control ---
+        const baseMaps = {
+            "OpenStreetMap": osm,
+            "Satellite": satellite,
+            "USGS Imagery": usgsImagery
+        };
+        const overlayMaps = {
+
+            "NAIP Imagery (USDA)": naipUSDA,
+            "3DEP Elevation Hillshade (USGS)": dep3USGS_Hillshade
+        };
+
+        // Add layer control to the map
+        L.control.layers(baseMaps, overlayMaps, { collapsed: false }).addTo(map);
+
+        console.log("Leaflet map initialized with layers.");
+
+        // --- Add ROI Selection (Placeholder - integrate from previous examples) ---
+        
+        const drawnItems = new L.FeatureGroup();
+        map.addLayer(drawnItems);
+        const drawControl = new L.Control.Draw({
+            edit: { featureGroup: drawnItems },
+            draw: { polygon: true, rectangle: true, polyline: false, marker: false, circle: false, circlemarker: false }
+        });
+         map.addControl(drawControl);
+
+         map.on(L.Draw.Event.CREATED, function (event) {
+             const layer = event.layer;
+             drawnItems.clearLayers();
+             drawnItems.addLayer(layer);
+             const roiGeoJsonGeometry = layer.toGeoJSON().geometry;
+             console.log("ROI Drawn:", JSON.stringify(roiGeoJsonGeometry));
+             // --- HERE you would trigger your backend (e.g., via fetch to a Flask route or Cloud Function) ---
+             // Example: callClipFunction(selectedDataSource, roiGeoJsonGeometry);
+         });
+
+        // Add a scale control
+        L.control.scale().addTo(map);
+
+    </script>
+</body>
 </html>
